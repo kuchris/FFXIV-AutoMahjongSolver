@@ -15,6 +15,8 @@ public sealed record TurnInput
 
     /// <summary>Whether riichi can legally be declared this turn (button offered / wall and points allow).</summary>
     public bool RiichiAvailable { get; init; } = true;
+
+    public EvalOptions Options { get; init; } = EvalOptions.Default;
 }
 
 public readonly record struct TurnDecision(int Discard, bool DeclareRiichi, string Reason);
@@ -29,7 +31,7 @@ public static class TurnPolicy
 {
     public static TurnDecision Decide(TurnInput input)
     {
-        List<ScoredDiscard> ranked = DiscardEvaluator.Rank(input.Counts14, input.Melds, input.Seen, input.Context);
+        List<ScoredDiscard> ranked = DiscardEvaluator.Rank(input.Counts14, input.Melds, input.Seen, input.Context, input.Options);
         if (ranked.Count == 0)
             return new TurnDecision(-1, false, "no legal discard");
 

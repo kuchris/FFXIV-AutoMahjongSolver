@@ -12,6 +12,20 @@ public class DiscardEvaluatorTests
         => ranked.First(r => r.Option.Tile == Tiles.Index(tile));
 
     [Fact]
+    public void OneShanten_KeepsTheHonorsThatMakeValuableTankiWaits()
+    {
+        // 234m 678p 4567s 7s + lone East, West, White, sitting East with White as dora. All three
+        // honor cuts leave the same acceptance, so one-step ranking cannot tell them apart. Looking
+        // ahead to the tenpai: a tanki on East (double wind) or White (dora + dragon) pays far more
+        // than one on West, so West is the cut.
+        var ctx = new EvalContext { DoraIndicators = new[] { Tiles.Index("7z") } };
+        var ranked = Rank("234m678p45677s135z", ctx);
+
+        Assert.Equal(1, ranked[0].Option.Shanten);
+        Assert.Equal(Tiles.Index("3z"), ranked[0].Option.Tile);
+    }
+
+    [Fact]
     public void ShantenStillDominatesValue()
     {
         var ranked = Rank("23455m234p234567s", new EvalContext());

@@ -57,6 +57,49 @@ public static class UkeireCalculator
     }
 
     /// <summary>
+    /// The widest acceptance reachable from a 14-tile hand by one discard that keeps it at
+    /// <paramref name="shanten"/> — the "next step" of a two-step lookahead. <paramref name="drawn"/>
+    /// is the tile just added to the hand, which is no longer live even though <paramref name="seen"/>
+    /// predates it.
+    /// </summary>
+    public static int BestFollowUpCount(Span<int> hand14, int meldCount, int shanten, int[]? seen, int drawn)
+    {
+        int best = 0;
+
+        for (int d = 0; d < Tiles.TypeCount; d++)
+        {
+            if (hand14[d] == 0)
+                continue;
+
+            hand14[d]--;
+            if (ShantenCalculator.Calculate(hand14, meldCount) == shanten)
+            {
+                int count = 0;
+                for (int t = 0; t < Tiles.TypeCount; t++)
+                {
+                    if (hand14[t] >= 4)
+                        continue;
+
+                    hand14[t]++;
+                    bool improves = ShantenCalculator.Calculate(hand14, meldCount) < shanten;
+                    hand14[t]--;
+                    if (!improves)
+                        continue;
+
+                    int known = seen is not null ? seen[t] + (t == drawn ? 1 : 0) : hand14[t] + (t == d ? 1 : 0);
+                    count += Math.Max(0, 4 - known);
+                }
+
+                if (count > best)
+                    best = count;
+            }
+            hand14[d]++;
+        }
+
+        return best;
+    }
+
+    /// <summary>
     /// Rank every legal discard from a 14-tile hand by resulting shanten (ascending),
     /// breaking ties by total ukeire (descending). The pure-efficiency layer of the solver.
     /// </summary>

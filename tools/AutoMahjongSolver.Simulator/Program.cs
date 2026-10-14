@@ -4,10 +4,15 @@ using AutoMahjongSolver.Simulator;
 
 // Usage:
 //   [matches] [seed]          self-play: every seat on the baseline policy
-//   ab [matches] [seed]       candidate vs baseline: the candidate takes each seat in turn against
-//                             three baselines on the same walls, so seat and wall luck cancel out
+//   ab [matches] [seed] [key=value ...]
+//                             candidate vs baseline: the candidate takes each seat in turn against
+//                             three baselines on the same walls, so seat and wall luck cancel out.
+//                             key=value pairs override the candidate's EvalOptions (see Policies).
 bool ab = args.Length > 0 && args[0] == "ab";
 string[] rest = ab ? args[1..] : args;
+if (ab)
+    Policies.Configure(rest.Where(a => a.Contains('=')));
+rest = rest.Where(a => !a.Contains('=')).ToArray();
 int matches = rest.Length > 0 && int.TryParse(rest[0], out int m) ? m : 100;
 int seed = rest.Length > 1 && int.TryParse(rest[1], out int s) ? s : 42;
 

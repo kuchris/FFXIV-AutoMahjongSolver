@@ -21,7 +21,7 @@ await their first observed in-game trigger.
 | Auto-riichi (declare on live closed tenpai, then tsumogiri) | **Verified live** |
 | Auto-play loop (discard, win, calls, redeal prompt, result screens) | **Verified live** — multi-hand sessions; popup fires retry-verified; settle grace + stall watchdog |
 | Nine-terminals redeal prompt (keep on kokushi shanten ≤ 2) | Implemented; option label match pending first observation |
-| Value-aware discard EV (exact points EV at tenpai; dora/aka/yakuhai retention above) | Implemented, unit-tested |
+| Value-aware discard EV (exact points EV at tenpai, tenpai-EV lookahead at 1-shanten, two-step acceptance above) | Implemented, unit-tested, A/B-measured |
 | Shared turn policy (engine `TurnPolicy`, used by bot and simulator) | Implemented |
 | Self-play simulator (`tools/AutoMahjongSolver.Simulator`) | Implemented; baseline below |
 | Calling strategy v1 (pon: yakuhai / secured-yaku / dora-tanyao; chi+kan never) | Implemented, unit-tested, simulated; pending live verification |
@@ -46,15 +46,22 @@ The simulator runs matches in parallel; each match draws its walls from its own 
 from the seed, so results are reproducible regardless of core count.
 
 Self-play baseline (2000 matches, seed 7, all four seats on the current policy, 2026-10-14):
-11067 hands, ~17.5% win rate per seat-hand, ~9.3% deal-in, ~30.6% riichi, 29.9% exhaustive draws,
-average win 6199 points / 3.39 han.
+11141 hands, 28.7% exhaustive draws, average win 6332 points / 3.45 han. Before the lookaheads below
+the same run gave 11067 hands, 29.9% draws, 6199 points / 3.39 han.
 
 Self-play is symmetric, so it cannot show whether a change wins more points. Judge policy changes
 with `ab`: point `Policies.Candidate` (tools/AutoMahjongSolver.Simulator/Policies.cs) at the
-variant, and the candidate takes each seat in turn against three baselines on the same walls. It
+variant (or pass `key=value` overrides of `EvalOptions`, e.g. `ab 2000 7 legacy=on shape=on`),
+and the candidate takes each seat in turn against three baselines on the same walls. It
 reports the candidate's score against the table average and its average placement, each with a
 standard error; identical policies score exactly 0. As a calibration point, a candidate that never
 folds against riichi scores -457 ± 120 per match over 2000 matches.
+
+Discard lookaheads (`EvalOptions`, on by default): at 1-shanten each discard is valued by the exact
+tenpai EV one draw ahead; further out by two-step acceptance. Measured against the previous one-step
+ranking: +362 ± 61 per match with both on (4000 matches, seed 11), +198 ± 45 with the 1-shanten EV
+lookahead alone. Reversed (one-step ranking as the candidate against three lookahead seats):
+-240 ± 63 (4000 matches, seed 23).
 
 The Dalamud plugin project builds against `Dalamud.NET.Sdk` and requires a Dalamud dev environment.
 
