@@ -26,7 +26,8 @@ internal static class AmjsConstants
     /// event 11 (state 41 can also lead there). State 42 (sub_1410E3D60) walks a 4-player standings
     /// array at module+0x430 and reads each name at data+0xDB8+idx*0x68; the crashes read idx values
     /// like 0xFFFFFFB0 and 0xD97DC898, i.e. the array was never filled. So something emits event 11
-    /// (likely an unexpected match end) with no standings, 2-3s after a bot discard on ranked.
+    /// with no standings, 2-3s after a bot discard on ranked. It is not a match end: after the crash
+    /// the client rejoins the same match with no penalty. What event 11 means is still unknown.
     /// </summary>
     public static readonly string[] ActuationAllowedAddons = ["Emj"];
 
