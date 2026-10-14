@@ -17,6 +17,15 @@ internal static class AmjsConstants
     public static readonly string[] EmjAddonNames = ["Emj", "EmjL"];
 
     /// <summary>
+    /// Addons auto-play may send inputs to. EmjL is read-only: with the same opcodes and state codes
+    /// as Emj, bot play on it crashed the client three times (2026-10-14), each 2-3s after a bot
+    /// discard, in AgentEmj.Update -> Utf8String.GetString, while manual play on it did not. Committing
+    /// in a separate frame from the highlight did not help, so raw FireCallback likely skips
+    /// addon-side state the ranked UI depends on.
+    /// </summary>
+    public static readonly string[] ActuationAllowedAddons = ["Emj"];
+
+    /// <summary>
     /// Player closed-hand tile node ids, left to right (community RE, last verified ~patch 7.2).
     /// Index 13 is the freshly drawn tile. These MUST be re-verified live with /amjs dump.
     /// </summary>

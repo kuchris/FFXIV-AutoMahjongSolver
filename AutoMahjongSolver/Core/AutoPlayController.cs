@@ -154,6 +154,13 @@ internal sealed class AutoPlayController : IDisposable
                 return;
             }
 
+            if (EmjBoardReader.CurrentAddonName is { } addonName
+                && !AmjsConstants.ActuationAllowedAddons.Contains(addonName))
+            {
+                Block("Auto-play is disabled on ranked tables for now: it crashes the game there. Suggestions still work.", table);
+                return;
+            }
+
             addonAbsent = false;
             graceUntil = now + MatchStartGraceMs;
             AmjsLog.Info($"auto: table detected (state {state}); settling for {MatchStartGraceMs / 1000}s before acting.");
