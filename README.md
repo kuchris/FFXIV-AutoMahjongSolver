@@ -53,4 +53,6 @@ The Dalamud plugin project builds against `Dalamud.NET.Sdk` and requires a Dalam
 
 Doman Mahjong is standard 4-player Japanese riichi with FFXIV-specific scoring: a flat han-to-points table with **no fu calculation**. The engine targets this ruleset.
 
-Auto-play of a ranked, human-PvP minigame carries account risk. Auto-play is off by default, gated behind an explicit opt-in, and disabled in ranked rooms.
+Auto-play of a ranked, human-PvP minigame carries account risk. Auto-play only acts at recognized
+Duty Finder tables (checked by ContentFinderCondition row). Ranked tables are refused unless
+"Auto-play on ranked tables" is enabled in `/amjs config`; unrecognized tables are always refused.

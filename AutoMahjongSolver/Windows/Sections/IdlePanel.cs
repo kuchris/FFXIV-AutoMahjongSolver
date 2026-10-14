@@ -19,6 +19,12 @@ internal static class IdlePanel
         DrawStatusPill(board);
         Styling.VSpace(16);
 
+        if (auto.BlockedReason is { } blocked)
+        {
+            Styling.TextCentered(blocked, Styling.AccentAmber, 0.9f);
+            Styling.VSpace(12);
+        }
+
         ModeSwitch.Draw(auto, 320f * scale);
         Styling.VSpace(16);
 

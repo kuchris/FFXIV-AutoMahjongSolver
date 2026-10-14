@@ -6,8 +6,20 @@ internal static class AutoPlaySettings
 {
     public static void Draw(Configuration cfg)
     {
+        DrawTablesGroup(cfg);
         DrawTimingGroup(cfg);
-        SettingsGroup.Footnote("Pick Suggestions or Auto-play from the main window. Suggestions only shows the best move and sends no inputs; Auto-play discards, declares tsumo/ron and passes calls for you (CASUAL tables only). Riichi is never declared for you. The timing below applies to Auto-play.");
+        SettingsGroup.Footnote("Pick Suggestions or Auto-play from the main window. Suggestions only shows the best move and sends no inputs; Auto-play discards, declares riichi and tsumo/ron, and handles calls for you. Auto-play only acts at recognized Duty Finder tables. The timing below applies to Auto-play.");
+    }
+
+    private static void DrawTablesGroup(Configuration cfg)
+    {
+        using var group = SettingsGroup.Begin("Tables");
+
+        SettingsRow.Draw("Auto-play on ranked tables",
+            "Off: auto-play disengages itself at a ranked table. On: it plays ranked matches too — your rating is at stake against human players, and automating ranked play carries more account risk.",
+            SettingsControls.ToggleWidth,
+            () => SettingsControls.DrawToggle(cfg, () => cfg.AllowRankedAutoPlay, value => cfg.AllowRankedAutoPlay = value),
+            SettingsRow.ToggleHeight);
     }
 
     private static void DrawTimingGroup(Configuration cfg)

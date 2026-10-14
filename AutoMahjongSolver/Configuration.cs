@@ -54,6 +54,12 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Which colour palette the in-game discard highlight uses.</summary>
     public HighlightColor HighlightColor { get; set; } = HighlightColor.Violet;
 
+    /// <summary>
+    /// Let auto-play act at ranked tables too. Off by default: ranked play risks rating and account
+    /// against human opponents, so it must be an explicit choice. Unrecognized tables stay blocked.
+    /// </summary>
+    public bool AllowRankedAutoPlay { get; set; }
+
     // Auto-play humanized timing (ms). Ranges feed AutoPlayController.DelayFor so the bot never reacts instantly.
     public int TurnDelayMinMs { get; set; } = 700;
     public int TurnDelayMaxMs { get; set; } = 1800;

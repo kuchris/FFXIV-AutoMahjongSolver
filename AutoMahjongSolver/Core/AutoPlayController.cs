@@ -63,6 +63,9 @@ internal sealed class AutoPlayController : IDisposable
     /// <summary>What the bot has done since the cockpit was last engaged.</summary>
     public SessionStats Stats { get; } = new();
 
+    /// <summary>Why auto-play last disengaged itself at a non-casual table; cleared on the next engage.</summary>
+    public string? BlockedReason { get; private set; }
+
     public void SetRunning(bool on)
     {
         if (on == running)
@@ -71,9 +74,10 @@ internal sealed class AutoPlayController : IDisposable
 
         if (on)
         {
+            BlockedReason = null;
             Stats.Reset();
             AmjsLog.Info(Mode == PlayMode.Auto
-                ? "Auto-play ON (CASUAL tables only): discards, riichi, tsumo, ron, auto-pass, auto-advance, defense."
+                ? "Auto-play ON (casual tables only; ranked tables are refused): discards, riichi, tsumo, ron, auto-pass, auto-advance, defense."
                 : "Suggestions ON: showing the best move each turn. No inputs are sent for you.");
         }
         else
@@ -143,6 +147,13 @@ internal sealed class AutoPlayController : IDisposable
 
         if (addonAbsent)
         {
+            TableKind table = EmjTableGuard.Current;
+            if (EmjTableGuard.BlockReason(table) is { } reason)
+            {
+                Block(reason, table);
+                return;
+            }
+
             addonAbsent = false;
             graceUntil = now + MatchStartGraceMs;
             AmjsLog.Info($"auto: table detected (state {state}); settling for {MatchStartGraceMs / 1000}s before acting.");
@@ -200,6 +211,18 @@ internal sealed class AutoPlayController : IDisposable
 
                 break;
         }
+    }
+
+    /// <summary>
+    /// Refuse to act at a non-casual table: disengage, and tell the player in chat and in the cockpit
+    /// (the plugin log alone goes unseen). Suggest mode is unaffected — it never hooks this loop.
+    /// </summary>
+    private void Block(string reason, TableKind table)
+    {
+        BlockedReason = reason;
+        AmjsLog.Warn($"auto: refused table ({table}, ContentFinderCondition {EmjTableGuard.CurrentCfc}).");
+        Plugin.ChatGui.PrintError($"{AmjsConstants.LogPrefix} {reason}");
+        SetRunning(false);
     }
 
     /// <summary>
