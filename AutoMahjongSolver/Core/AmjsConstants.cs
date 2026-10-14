@@ -7,8 +7,20 @@ internal static class AmjsConstants
 
     public const string LogPrefix = "[AMJS]";
 
-    /// <summary>Internal addon name for the Doman Mahjong game UI.</summary>
-    public const string EmjAddon = "Emj";
+    /// <summary>
+    /// Internal addon names for the Doman Mahjong game UI, tried in order. The client opens either the
+    /// standard "Emj" or the large-layout "EmjL" variant (seen live 2026-10-14) depending on the
+    /// player's settings; node ids are assumed shared until a /amjs tree on EmjL says otherwise.
+    /// </summary>
+    public static readonly string[] EmjAddonNames = ["Emj", "EmjL"];
+
+    /// <summary>
+    /// Addons whose input protocol (state codes and callback opcodes) is verified for actuation.
+    /// EmjL reads fine, but auto-play on it crashed the client inside AgentEmj.Update three discards
+    /// into a match (2026-10-14), after advance opcodes fired on states that may mean something else
+    /// there. Until an EmjL capture (/amjs capture) maps its protocol, it stays read-only.
+    /// </summary>
+    public static readonly string[] ActuationVerifiedAddons = ["Emj"];
 
     /// <summary>
     /// Player closed-hand tile node ids, left to right (community RE, last verified ~patch 7.2).

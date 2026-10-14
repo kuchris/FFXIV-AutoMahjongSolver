@@ -109,10 +109,29 @@ internal sealed class BoardSnapshot
 /// </summary>
 internal static unsafe class EmjBoardReader
 {
+    private static string? lastAddonName;
+
+    /// <summary>The name of the table addon most recently found, or null before any was seen.</summary>
+    public static string? CurrentAddonName => lastAddonName;
+
     public static bool TryGetAddon(out AtkUnitBase* addon)
     {
-        addon = (AtkUnitBase*)Plugin.GameGui.GetAddonByName(AmjsConstants.EmjAddon, 1).Address;
-        return addon != null && addon->IsVisible;
+        foreach (string name in AmjsConstants.EmjAddonNames)
+        {
+            addon = (AtkUnitBase*)Plugin.GameGui.GetAddonByName(name, 1).Address;
+            if (addon == null || !addon->IsVisible)
+                continue;
+
+            if (name != lastAddonName)
+            {
+                lastAddonName = name;
+                AmjsLog.Info($"table UI found: addon '{name}'.");
+            }
+            return true;
+        }
+
+        addon = null;
+        return false;
     }
 
     /// <summary>The addon's AtkValues[0] state code (30 = our discard turn), or -1 if unavailable.</summary>
