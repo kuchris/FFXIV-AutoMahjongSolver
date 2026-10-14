@@ -6,8 +6,10 @@ namespace AutoMahjongSolver.Core.Game;
 /// Actuates Doman Mahjong inputs by replaying the FireCallback protocol captured from manual play.
 /// A discard is a two-call handshake: [15, iconId] selects/highlights the tile (and moves the
 /// after-draw surface from state 6 to state 30), then [7, slot] commits it. Manual play always lets
-/// the surface reach state 30 before committing (captured on EmjL, 2026-10-14), so a discard at
-/// state 6 only highlights and reports "not yet"; the caller retries and commits once at 30.
+/// the surface reach state 30 before committing, and never sends the commit in the same frame as a
+/// highlight (captured on EmjL, 2026-10-14). The bot mirrors that: highlight at 6, highlight again
+/// at 30, and commit alone on a later tick. Firing [15] and [7] in one frame was followed both
+/// times by a client crash in AgentEmj.Update ~3s later on the ranked EmjL table.
 /// Gated on the turn state so a mis-timed call cannot wedge the addon.
 /// </summary>
 internal static unsafe class EmjActuator
@@ -29,9 +31,16 @@ internal static unsafe class EmjActuator
     /// </summary>
     private const int HighlightGiveUpMs = 1200;
 
+    /// <summary>The commit waits at least this long after the state-30 highlight, so the two never share a frame.</summary>
+    private const int CommitAfterHighlightMs = 100;
+
     private static long lastHighlightTick;
     private static long highlightSince;
     private static int highlightSlot = -1;
+
+    // The state-30 highlight that a commit must follow: which slot, and when.
+    private static int armedSlot = -1;
+    private static long armedTick;
 
     /// <summary>Discard the given hand slot (0-12 hand position, 13 = drawn tile).</summary>
     public static bool DiscardSlot(int slot)
@@ -122,11 +131,26 @@ internal static unsafe class EmjActuator
 
         highlightSlot = -1;
 
-        if (iconId > 0)
+        if (state == StateDiscardTurn && iconId > 0 && (armedSlot != slot || now - armedTick > HighlightGiveUpMs))
+        {
+            // Select the tile on this tick; the commit follows alone on a later one, as in manual play.
+            FireInts(addon, OpHighlight, iconId);
+            armedSlot = slot;
+            armedTick = now;
+            return false;
+        }
+
+        if (state == StateDiscardTurn && iconId > 0 && now - armedTick < CommitAfterHighlightMs)
+            return false;
+
+        armedSlot = -1;
+
+        // States 6 (after the give-up) and 28 keep the original same-frame handshake.
+        if (iconId > 0 && state != StateDiscardTurn)
             FireInts(addon, OpHighlight, iconId);
         FireInts(addon, OpDiscardCommit, slot);
 
-        AmjsLog.Info($"discard: fired [15, {iconId}] + [7, {slot}] (state {state}).");
+        AmjsLog.Info($"discard: fired [7, {slot}] (icon {iconId}, state {state}).");
         return true;
     }
 
