@@ -24,7 +24,7 @@ internal sealed class AutoPlayController : IDisposable
     /// click seconds later worked). Retry after this delay, give up after <see cref="MaxPopupAttempts"/>.
     /// </summary>
     private const int PopupRetryDelayMs = 700;
-    private const int MaxPopupAttempts = 4;
+    private const int MaxPopupAttempts = 6;
 
     /// <summary>
     /// Hold all actuation this long after the Emj addon first appears (or reappears). Acting while
@@ -163,11 +163,15 @@ internal sealed class AutoPlayController : IDisposable
         if (now < graceUntil)
             return;
 
-        TrackDiscards();
+        bool newDiscard = TrackDiscards();
 
         // 6 and 30 are the same "our turn" (our own [15] highlight moves 6->30 mid-discard); don't re-arm between them.
         bool sameTurn = state is 6 or 30 && prevState is 6 or 30;
-        if (state != prevState && !sameTurn)
+
+        // Back-to-back call offers can stay in state 15 throughout; a fresh opponent discard means a
+        // fresh popup, so it gets its own delay and retry budget instead of inheriting the last one's.
+        bool newOffer = state == 15 && prevState == 15 && newDiscard;
+        if ((state != prevState && !sameTurn) || newOffer)
         {
             acted = false;
             riichiFired = false;
@@ -230,21 +234,27 @@ internal sealed class AutoPlayController : IDisposable
     /// does not say which tile is being offered. The first read after the addon appears only seeds
     /// the lengths (mid-hand engages would otherwise mistake the whole river for one discard).
     /// </summary>
-    private void TrackDiscards()
+    /// <returns>Whether an opponent's river grew since the last read.</returns>
+    private bool TrackDiscards()
     {
         BoardSnapshot? board = EmjBoardReader.TryReadBoard();
         if (board is null)
-            return;
+            return false;
 
+        bool grew = false;
         for (int i = 0; i < prevRiverLens.Length && i < board.Rivers.Count; i++)
         {
             IReadOnlyList<int> river = board.Rivers[i];
             if (riversSeeded && i != AmjsConstants.SelfIndex && river.Count > prevRiverLens[i])
+            {
                 lastDiscardTile = river[river.Count - 1];
+                grew = true;
+            }
             prevRiverLens[i] = river.Count;
         }
 
         riversSeeded = true;
+        return grew;
     }
 
     private void DoTurn(bool afterCall)

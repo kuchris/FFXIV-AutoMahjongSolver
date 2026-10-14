@@ -23,7 +23,15 @@ internal static unsafe class EmjActuator
     /// <summary>Re-send the state-6 highlight at most this often while waiting for the surface to reach 30.</summary>
     private const int HighlightRetryMs = 400;
 
+    /// <summary>
+    /// If the surface is still at state 6 this long after the first highlight, commit there anyway
+    /// (the original same-frame protocol, verified on Emj) rather than let the turn timer run out.
+    /// </summary>
+    private const int HighlightGiveUpMs = 1200;
+
     private static long lastHighlightTick;
+    private static long highlightSince;
+    private static int highlightSlot = -1;
 
     /// <summary>Discard the given hand slot (0-12 hand position, 13 = drawn tile).</summary>
     public static bool DiscardSlot(int slot)
@@ -87,18 +95,32 @@ internal static unsafe class EmjActuator
             return false;
         }
 
+        long now = Environment.TickCount64;
         if (state == StateAfterDraw && iconId > 0)
         {
-            // Highlight only; the commit waits for the surface to move to state 30, as in manual play.
-            long now = Environment.TickCount64;
-            if (now - lastHighlightTick >= HighlightRetryMs)
+            if (slot != highlightSlot || now - lastHighlightTick > HighlightGiveUpMs + HighlightRetryMs)
             {
-                lastHighlightTick = now;
-                FireInts(addon, OpHighlight, iconId);
-                AmjsLog.Debug($"discard: highlighted [15, {iconId}] at state 6; committing at state 30.");
+                highlightSlot = slot;
+                highlightSince = now;
+                lastHighlightTick = 0;
             }
-            return false;
+
+            if (now - highlightSince < HighlightGiveUpMs)
+            {
+                // Highlight only; the commit waits for the surface to move to state 30, as in manual play.
+                if (now - lastHighlightTick >= HighlightRetryMs)
+                {
+                    lastHighlightTick = now;
+                    FireInts(addon, OpHighlight, iconId);
+                    AmjsLog.Debug($"discard: highlighted [15, {iconId}] at state 6; committing at state 30.");
+                }
+                return false;
+            }
+
+            AmjsLog.Warn($"discard: still at state 6 {now - highlightSince}ms after highlighting slot {slot}; committing there.");
         }
+
+        highlightSlot = -1;
 
         if (iconId > 0)
             FireInts(addon, OpHighlight, iconId);
