@@ -5,8 +5,10 @@ namespace AutoMahjongSolver.Core.Game;
 /// <summary>
 /// Actuates Doman Mahjong inputs by replaying the FireCallback protocol captured from manual play.
 /// A discard is a two-call handshake: [15, iconId] selects/highlights the tile (and moves the
-/// after-draw surface from state 6 to state 30), then [7, slot] commits it. Gated on the turn state
-/// so a mis-timed call cannot wedge the addon.
+/// after-draw surface from state 6 to state 30), then [7, slot] commits it. Manual play always lets
+/// the surface reach state 30 before committing (captured on EmjL, 2026-10-14), so a discard at
+/// state 6 only highlights and reports "not yet"; the caller retries and commits once at 30.
+/// Gated on the turn state so a mis-timed call cannot wedge the addon.
 /// </summary>
 internal static unsafe class EmjActuator
 {
@@ -17,6 +19,11 @@ internal static unsafe class EmjActuator
     private const int StateAfterDraw = 6;       // self-action surface (riichi/tsumo/kan or discard)
     private const int StateAfterCall = 28;      // post-call discard surface (verified live after a pon)
     private const int StateDiscardTurn = 30;    // tile-selection discard surface
+
+    /// <summary>Re-send the state-6 highlight at most this often while waiting for the surface to reach 30.</summary>
+    private const int HighlightRetryMs = 400;
+
+    private static long lastHighlightTick;
 
     /// <summary>Discard the given hand slot (0-12 hand position, 13 = drawn tile).</summary>
     public static bool DiscardSlot(int slot)
@@ -77,6 +84,19 @@ internal static unsafe class EmjActuator
         if (state != StateDiscardTurn && state != StateAfterDraw && state != StateAfterCall)
         {
             AmjsLog.Warn($"discard: not our turn (state={state}, need {StateAfterDraw}, {StateAfterCall} or {StateDiscardTurn}).");
+            return false;
+        }
+
+        if (state == StateAfterDraw && iconId > 0)
+        {
+            // Highlight only; the commit waits for the surface to move to state 30, as in manual play.
+            long now = Environment.TickCount64;
+            if (now - lastHighlightTick >= HighlightRetryMs)
+            {
+                lastHighlightTick = now;
+                FireInts(addon, OpHighlight, iconId);
+                AmjsLog.Debug($"discard: highlighted [15, {iconId}] at state 6; committing at state 30.");
+            }
             return false;
         }
 

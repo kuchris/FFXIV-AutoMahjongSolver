@@ -10,17 +10,11 @@ internal static class AmjsConstants
     /// <summary>
     /// Internal addon names for the Doman Mahjong game UI, tried in order. Casual tables open "Emj";
     /// "EmjL" was seen live on a ranked table (ContentFinderCondition 766, 2026-10-14) and appears to
-    /// be the ranked variant. Hand node ids read correctly on both.
+    /// be the ranked variant. Hand node ids read correctly on both, and a manual EmjL capture showed
+    /// the same state codes and opcodes as Emj (discard 15/7, call 11 with labels from index 7,
+    /// advance 17 at 32 and 14 at 29, new-hand 9 at 2).
     /// </summary>
     public static readonly string[] EmjAddonNames = ["Emj", "EmjL"];
-
-    /// <summary>
-    /// Addons whose input protocol (state codes and callback opcodes) is verified for actuation.
-    /// EmjL (ranked) reads fine, but auto-play on it crashed the client inside AgentEmj.Update three
-    /// discards into a match (2026-10-14), after advance opcodes fired on states that may mean
-    /// something else there. Until an EmjL capture (/amjs capture) maps its protocol, it stays read-only.
-    /// </summary>
-    public static readonly string[] ActuationVerifiedAddons = ["Emj"];
 
     /// <summary>
     /// Player closed-hand tile node ids, left to right (community RE, last verified ~patch 7.2).

@@ -111,9 +111,6 @@ internal static unsafe class EmjBoardReader
 {
     private static string? lastAddonName;
 
-    /// <summary>The name of the table addon most recently found, or null before any was seen.</summary>
-    public static string? CurrentAddonName => lastAddonName;
-
     public static bool TryGetAddon(out AtkUnitBase* addon)
     {
         foreach (string name in AmjsConstants.EmjAddonNames)

@@ -154,13 +154,6 @@ internal sealed class AutoPlayController : IDisposable
                 return;
             }
 
-            if (EmjBoardReader.CurrentAddonName is { } addonName
-                && !AmjsConstants.ActuationVerifiedAddons.Contains(addonName))
-            {
-                Block($"Auto-play doesn't support this table layout ('{addonName}') yet. Suggestions still work.", table);
-                return;
-            }
-
             addonAbsent = false;
             graceUntil = now + MatchStartGraceMs;
             AmjsLog.Info($"auto: table detected (state {state}); settling for {MatchStartGraceMs / 1000}s before acting.");
