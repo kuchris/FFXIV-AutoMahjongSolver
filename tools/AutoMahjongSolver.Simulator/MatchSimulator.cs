@@ -16,15 +16,37 @@ internal sealed class SimStats
     public readonly int[] PlacementSum = new int[4];
     public readonly long[] ScoreSum = new long[4];
     public int Matches;
+
+    public void Add(SimStats other)
+    {
+        Hands += other.Hands;
+        Draws += other.Draws;
+        Tsumos += other.Tsumos;
+        Rons += other.Rons;
+        WinPointsTotal += other.WinPointsTotal;
+        WinHanTotal += other.WinHanTotal;
+        Matches += other.Matches;
+        for (int s = 0; s < 4; s++)
+        {
+            Wins[s] += other.Wins[s];
+            DealIns[s] += other.DealIns[s];
+            Riichis[s] += other.Riichis[s];
+            PlacementSum[s] += other.PlacementSum[s];
+            ScoreSum[s] += other.ScoreSum[s];
+        }
+    }
 }
+
+/// <summary>Final standing of one match, by seat.</summary>
+internal readonly record struct MatchResult(int[] Scores, int[] Places);
 
 /// <summary>An east-round match: dealer repeats on a dealer win or dealer tenpai draw, capped to bound runtime.</summary>
 internal static class MatchSimulator
 {
-    private const int StartScore = 25000;
+    public const int StartScore = 25000;
     private const int MaxHands = 16;
 
-    public static void Play(Func<TurnInput, TurnDecision>[] policies, Random rng, SimStats stats)
+    public static MatchResult Play(Func<TurnInput, TurnDecision>[] policies, Random rng, SimStats stats)
     {
         var scores = new int[4];
         Array.Fill(scores, StartScore);
@@ -81,11 +103,16 @@ internal static class MatchSimulator
 
         int[] bySeat = [0, 1, 2, 3];
         Array.Sort(bySeat, (a, b) => scores[b].CompareTo(scores[a]));
+        var places = new int[4];
         for (int place = 0; place < 4; place++)
-            stats.PlacementSum[bySeat[place]] += place + 1;
+            places[bySeat[place]] = place + 1;
         for (int s = 0; s < 4; s++)
+        {
+            stats.PlacementSum[s] += places[s];
             stats.ScoreSum[s] += scores[s];
+        }
 
         stats.Matches++;
+        return new MatchResult(scores, places);
     }
 }

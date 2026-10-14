@@ -38,14 +38,23 @@ await their first observed in-game trigger.
 
 ```
 dotnet test                                                   # engine + tests (no game required)
-dotnet run --project tools/AutoMahjongSolver.Simulator -c Release -- 200 7   # self-play: matches, seed
+dotnet run --project tools/AutoMahjongSolver.Simulator -c Release -- 2000 7      # self-play: matches, seed
+dotnet run --project tools/AutoMahjongSolver.Simulator -c Release -- ab 2000 7   # candidate vs baseline
 ```
 
-Self-play baseline (200 matches, seed 7, all four seats on the current policy), with pon calls
-(2026-06-12): 1125 hands, ~17.5% win rate per seat-hand, ~9.7% deal-in, ~30.5% riichi, 30.1%
-exhaustive draws, average win 5990 points / 3.31 han. The closed-hands-only run before calls was
-38.7% draws / 15.3% wins / 7.2% deal-in / avg win 7302 — pon trades win size for completion rate.
-Policy changes should be judged against these numbers, same seed.
+The simulator runs matches in parallel; each match draws its walls from its own stream derived
+from the seed, so results are reproducible regardless of core count.
+
+Self-play baseline (2000 matches, seed 7, all four seats on the current policy, 2026-10-14):
+11067 hands, ~17.5% win rate per seat-hand, ~9.3% deal-in, ~30.6% riichi, 29.9% exhaustive draws,
+average win 6199 points / 3.39 han.
+
+Self-play is symmetric, so it cannot show whether a change wins more points. Judge policy changes
+with `ab`: point `Policies.Candidate` (tools/AutoMahjongSolver.Simulator/Policies.cs) at the
+variant, and the candidate takes each seat in turn against three baselines on the same walls. It
+reports the candidate's score against the table average and its average placement, each with a
+standard error; identical policies score exactly 0. As a calibration point, a candidate that never
+folds against riichi scores -457 ± 120 per match over 2000 matches.
 
 The Dalamud plugin project builds against `Dalamud.NET.Sdk` and requires a Dalamud dev environment.
 
