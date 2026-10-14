@@ -34,6 +34,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ConfigWindow configWindow;
     private readonly AboutWindow aboutWindow;
     private readonly EmjCaptureLogger captureLogger;
+    private readonly EmjAgentProbe agentProbe = new();
     private readonly SuggestionOverlay suggestionOverlay;
 
     public Plugin()
@@ -57,7 +58,7 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.AddHandler(AmjsConstants.PrimaryCommand, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggle the window. /amjs config | about | auto | suggest. Debug: dump|tree|board|melds|capture.",
+            HelpMessage = "Toggle the window. /amjs config | about | auto | suggest. Debug: dump|tree|board|melds|capture|probe.",
         });
         CommandManager.AddHandler(AmjsConstants.AliasCommand, new CommandInfo(OnCommand)
         {
@@ -84,6 +85,7 @@ public sealed class Plugin : IDalamudPlugin
 
         AutoPlay.Dispose();
         captureLogger.Dispose();
+        agentProbe.Dispose();
 
         CommandManager.RemoveHandler(AmjsConstants.PrimaryCommand);
         CommandManager.RemoveHandler(AmjsConstants.AliasCommand);
@@ -124,6 +126,15 @@ public sealed class Plugin : IDalamudPlugin
                     captureLogger.SetCapturing(false);
                 else
                     captureLogger.Toggle();
+                break;
+            case "probe":
+                string probe = parts.Length > 1 ? parts[1] : "toggle";
+                if (probe == "on")
+                    agentProbe.SetProbing(true);
+                else if (probe == "off")
+                    agentProbe.SetProbing(false);
+                else
+                    agentProbe.Toggle();
                 break;
             case "discard":
                 if (parts.Length > 1 && int.TryParse(parts[1], out int slot))
