@@ -36,6 +36,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly AboutWindow aboutWindow;
     private readonly EmjCaptureLogger captureLogger;
     private readonly EmjAgentProbe agentProbe = new();
+
+    internal EmjAgentProbe AgentProbe => agentProbe;
     private readonly SuggestionOverlay suggestionOverlay;
 
     public Plugin()

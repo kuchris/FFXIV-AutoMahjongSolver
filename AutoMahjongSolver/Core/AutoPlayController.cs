@@ -185,6 +185,12 @@ internal sealed class AutoPlayController : IDisposable
         // Back-to-back call offers can stay in state 15 throughout; a fresh opponent discard means a
         // fresh popup, so it gets its own delay and retry budget instead of inheriting the last one's.
         bool newOffer = state == 15 && prevState == 15 && newDiscard;
+
+        // Diagnostics: while probing, record the clickable controls of each result screen once, to
+        // find the hand-change button to click instead of the raw [17]/[14] callbacks.
+        if (state != prevState && state is 29 or 32 && Plugin.Instance.AgentProbe.Probing)
+            EmjClicker.DumpButtons();
+
         if ((state != prevState && !sameTurn) || newOffer)
         {
             acted = false;
