@@ -59,7 +59,7 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.AddHandler(AmjsConstants.PrimaryCommand, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggle the window. /amjs config | about | auto | suggest. Debug: dump|tree|board|melds|capture|probe|ranked-test.",
+            HelpMessage = "Toggle the window. /amjs config | about | auto | suggest. Debug: dump|tree|board|melds|capture|probe|ranked-test|events|click-discard.",
         });
         CommandManager.AddHandler(AmjsConstants.AliasCommand, new CommandInfo(OnCommand)
         {
@@ -127,6 +127,15 @@ public sealed class Plugin : IDalamudPlugin
                     captureLogger.SetCapturing(false);
                 else
                     captureLogger.Toggle();
+                break;
+            case "events":
+                EmjClicker.DumpEvents();
+                break;
+            case "click-discard":
+                EmjClicker.Enabled = (parts.Length > 1 ? parts[1] : "on") != "off";
+                AmjsLog.Info(EmjClicker.Enabled
+                    ? "Click-discard ON for this session: discards simulate a click on the tile."
+                    : "Click-discard OFF: discards fire the callback directly.");
                 break;
             case "ranked-test":
                 bool test = (parts.Length > 1 ? parts[1] : "on") != "off";

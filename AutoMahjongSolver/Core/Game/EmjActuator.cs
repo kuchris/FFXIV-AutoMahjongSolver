@@ -145,6 +145,17 @@ internal static unsafe class EmjActuator
 
         armedSlot = -1;
 
+        if (state == StateDiscardTurn && EmjClicker.Enabled)
+        {
+            if (EmjClicker.TryClickSlot(slot))
+            {
+                AmjsLog.Info($"discard: clicked slot {slot} (icon {iconId}, state {state}).");
+                return true;
+            }
+
+            AmjsLog.Warn($"discard: click on slot {slot} unavailable; falling back to the callback.");
+        }
+
         // States 6 (after the give-up) and 28 keep the original same-frame handshake.
         if (iconId > 0 && state != StateDiscardTurn)
             FireInts(addon, OpHighlight, iconId);
