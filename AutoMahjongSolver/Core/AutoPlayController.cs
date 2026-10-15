@@ -170,7 +170,7 @@ internal sealed class AutoPlayController : IDisposable
 
             addonAbsent = false;
             graceUntil = now + MatchStartGraceMs;
-            AmjsLog.Info($"auto: table detected (state {state}); settling for {MatchStartGraceMs / 1000}s before acting.");
+            AmjsLog.Info($"auto: table detected (state {state}, addon {EmjBoardReader.CurrentAddonName}, {table}, ContentFinderCondition {EmjTableGuard.CurrentCfc}); settling for {MatchStartGraceMs / 1000}s before acting.");
         }
 
         // prevState stays untouched during the grace so the first live tick re-arms cleanly.
@@ -221,12 +221,13 @@ internal sealed class AutoPlayController : IDisposable
             // [9] when the deal animation finishes. Sending ours too caused a duplicate ack that
             // desynced the table (two live freezes both traced to a stray [9] ~3-4s after ours).
             case 29 or 32:
-                // On the ranked EmjL table a raw [17]/[14] closes the result screen but leaves its
-                // 30s auto-close timer running; when it expires mid-next-hand the addon fires its own
+                // At ranked tables a raw [17]/[14] closes the result screen but leaves its 30s
+                // auto-close timer running; when it expires mid-next-hand the addon fires its own
                 // [14], AgentEmj takes it as "close the final results" and jumps to state 41/42 with
-                // empty standings, wedging or crashing the client (seen four times, each exactly 30s
-                // after a bot advance). There the bot leaves the result screens to the game's timer.
-                if (EmjBoardReader.CurrentAddonName == "EmjL")
+                // empty standings, wedging or crashing the client (seen five times, each ~30s after a
+                // bot advance, on both the Emj and EmjL addons). There the bot leaves result screens
+                // to the game's own timer.
+                if (EmjTableGuard.Current == TableKind.Ranked || EmjBoardReader.CurrentAddonName == "EmjL")
                 {
                     acted = true;
                     break;
