@@ -2,7 +2,7 @@ using MahjongXiv.Core;
 using MahjongXiv.Core.Game;
 using MahjongXiv.Engine;
 
-namespace MahjongXiv.Windows.Sections;
+namespace MahjongXiv.Windows;
 
 internal enum BoardPhase
 {

@@ -32,8 +32,6 @@ public sealed class Plugin : IDalamudPlugin
     internal AutoPlayController AutoPlay { get; }
 
     private readonly MainWindow mainWindow;
-    private readonly ConfigWindow configWindow;
-    private readonly AboutWindow aboutWindow;
     private readonly EmjCaptureLogger captureLogger;
     private readonly EmjAgentProbe agentProbe = new();
 
@@ -51,17 +49,13 @@ public sealed class Plugin : IDalamudPlugin
         captureLogger = new EmjCaptureLogger();
 
         mainWindow = new MainWindow(this);
-        configWindow = new ConfigWindow(this);
-        aboutWindow = new AboutWindow();
         suggestionOverlay = new SuggestionOverlay(this);
 
         WindowSystem.AddWindow(mainWindow);
-        WindowSystem.AddWindow(configWindow);
-        WindowSystem.AddWindow(aboutWindow);
 
         CommandManager.AddHandler(MjConstants.PrimaryCommand, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggle the window. /mj config | about | auto | suggest. Debug: dump|tree|board|melds|capture|probe|diag|events|buttons|click-discard.",
+            HelpMessage = "Toggle the window. /mj auto | suggest [on|off]. Debug: dump|tree|board|melds|capture|probe|diag|events|buttons|click-discard.",
         });
         CommandManager.AddHandler(MjConstants.AliasCommand, new CommandInfo(OnCommand)
         {
@@ -71,7 +65,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
         PluginInterface.UiBuilder.Draw += suggestionOverlay.Draw;
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
-        PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUi;
+        PluginInterface.UiBuilder.OpenConfigUi += ToggleMainUi;
     }
 
     public void Dispose()
@@ -79,12 +73,10 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.Draw -= WindowSystem.Draw;
         PluginInterface.UiBuilder.Draw -= suggestionOverlay.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
-        PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
+        PluginInterface.UiBuilder.OpenConfigUi -= ToggleMainUi;
 
         WindowSystem.RemoveAllWindows();
         mainWindow.Dispose();
-        configWindow.Dispose();
-        aboutWindow.Dispose();
 
         AutoPlay.Dispose();
         captureLogger.Dispose();
@@ -99,13 +91,6 @@ public sealed class Plugin : IDalamudPlugin
         string[] parts = args.Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         switch (parts.Length == 0 ? string.Empty : parts[0])
         {
-            case "config":
-            case "settings":
-                ToggleConfigUi();
-                break;
-            case "about":
-                ToggleAboutUi();
-                break;
             case "dump":
                 EmjAddonDumper.Dump();
                 break;
@@ -209,6 +194,4 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     public void ToggleMainUi() => mainWindow.Toggle();
-    public void ToggleConfigUi() => configWindow.Toggle();
-    public void ToggleAboutUi() => aboutWindow.Toggle();
 }

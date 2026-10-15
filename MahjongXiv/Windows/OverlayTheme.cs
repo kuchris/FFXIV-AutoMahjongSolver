@@ -1,11 +1,9 @@
 using System.Numerics;
-using MahjongXiv.Windows.Sections.Config;
 
 namespace MahjongXiv.Windows;
 
 /// <summary>
-/// Colour palettes and labels for the in-game discard highlight, shared by the renderer
-/// (<see cref="SuggestionOverlay"/>) and the settings UI so the two never drift. Each palette is a
+/// Colour palettes for the in-game discard highlight drawn by <see cref="SuggestionOverlay"/>. Each palette is a
 /// vivid <see cref="Palette.Primary"/> for fills/glows and a brighter <see cref="Palette.Bright"/> for
 /// edges and pointers, chosen to read on the busy 3-D mahjong board.
 /// </summary>
@@ -31,13 +29,4 @@ internal static class OverlayTheme
         return i >= 0 && i < Palettes.Length ? Palettes[i] : Palettes[0];
     }
 
-    /// <summary>The selectable primary colours, in enum order, for the settings swatch picker.</summary>
-    public static readonly Vector4[] Swatches = Array.ConvertAll(Palettes, p => p.Primary);
-
-    public static readonly SettingsControls.Choices.Choice[] StyleChoices =
-    {
-        new("Brackets", "Glowing corner brackets framing the tile, like a targeting reticle."),
-        new("Arrow", "A bobbing arrow that points down at the tile from above."),
-        new("Glow", "A soft pulsing halo around a filled tile tint."),
-    };
 }

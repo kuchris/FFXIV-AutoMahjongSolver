@@ -1,6 +1,5 @@
 using System.Numerics;
 using MahjongXiv.Core.Game;
-using MahjongXiv.Windows.Sections;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
