@@ -221,6 +221,17 @@ internal sealed class AutoPlayController : IDisposable
             // [9] when the deal animation finishes. Sending ours too caused a duplicate ack that
             // desynced the table (two live freezes both traced to a stray [9] ~3-4s after ours).
             case 29 or 32:
+                // On the ranked EmjL table a raw [17]/[14] closes the result screen but leaves its
+                // 30s auto-close timer running; when it expires mid-next-hand the addon fires its own
+                // [14], AgentEmj takes it as "close the final results" and jumps to state 41/42 with
+                // empty standings, wedging or crashing the client (seen four times, each exactly 30s
+                // after a bot advance). There the bot leaves the result screens to the game's timer.
+                if (EmjBoardReader.CurrentAddonName == "EmjL")
+                {
+                    acted = true;
+                    break;
+                }
+
                 if (EmjActuator.Advance())
                 {
                     acted = true;
