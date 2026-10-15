@@ -1,4 +1,5 @@
 using System.IO;
+using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 
@@ -15,6 +16,8 @@ namespace AutoMahjongSolver.Core.Game;
 /// +0x28 count; an event's first dword is its type. State 8 enters state 42 on event 11.</item>
 /// <item>State 42 reads standings indices from inner+0x440 (count at [inner+0x468]+0x1418) and the
 /// crash read garbage indices there.</item>
+/// <item>The module's listener pushes event 11 through one virtual (found by signature below), with a
+/// 0x2C-byte payload. The probe hooks it to log the payload and then calls the original unchanged.</item>
 /// </list>
 /// </summary>
 internal sealed unsafe class EmjAgentProbe : IDisposable
@@ -31,6 +34,14 @@ internal sealed unsafe class EmjAgentProbe : IDisposable
     private const int OffStandings = 0x430 + 0x10;
     private const int OffStandingsOwner = 0x468;
     private const int OffStandingsCount = 0x1418;
+
+    /// <summary>Prologue of the listener virtual that queues event 11 (unique in ffxiv_dx11.exe, 2026-10-13).</summary>
+    private const string PushEvent11Signature = "48 89 5C 24 08 57 48 83 EC 40 48 8B FA C7 44 24 20 0B 00 00 00";
+    private const int Event11PayloadInts = 0x2C / 4;
+
+    private delegate nint PushEvent11Delegate(nint inner, int* payload);
+
+    private Hook<PushEvent11Delegate>? pushEvent11Hook;
 
     /// <summary>probe.log while probing, else null. <see cref="AmjsLog"/> mirrors every line into it.</summary>
     private static string? mirrorPath;
@@ -56,9 +67,11 @@ internal sealed unsafe class EmjAgentProbe : IDisposable
             mirrorPath = Path.Combine(Plugin.PluginInterface.GetPluginConfigDirectory(), "probe.log");
             Plugin.Framework.Update += OnUpdate;
             Log($"Probe ON: logging AgentEmj state changes and module events (read-only) to /xllog and {mirrorPath}.");
+            EnableEvent11Hook();
         }
         else
         {
+            pushEvent11Hook?.Disable();
             Plugin.Framework.Update -= OnUpdate;
             Log("Probe OFF.");
             mirrorPath = null;
@@ -124,6 +137,47 @@ internal sealed unsafe class EmjAgentProbe : IDisposable
         }
     }
 
+    private void EnableEvent11Hook()
+    {
+        if (pushEvent11Hook is null)
+        {
+            if (!Plugin.SigScanner.TryScanText(PushEvent11Signature, out nint address))
+            {
+                Log("probe: event-11 push not found by signature (game updated?); payload logging off.");
+                return;
+            }
+
+            pushEvent11Hook = Plugin.GameInteropProvider.HookFromAddress<PushEvent11Delegate>(address, PushEvent11Detour);
+            Log($"probe: event-11 hook created @ 0x{address:X}.");
+        }
+
+        pushEvent11Hook.Enable();
+    }
+
+    private nint PushEvent11Detour(nint inner, int* payload)
+    {
+        try
+        {
+            if (payload != null)
+            {
+                var ints = new string[Event11PayloadInts];
+                for (int i = 0; i < ints.Length; i++)
+                    ints[i] = payload[i].ToString();
+                Log($"probe: EVENT 11 pushed, payload [{string.Join(", ", ints)}], agent state {lastState}, addon state {EmjBoardReader.ReadStateCode()}.");
+            }
+            else
+            {
+                Log("probe: EVENT 11 pushed with a null payload.");
+            }
+        }
+        catch (Exception ex)
+        {
+            AmjsLog.Error($"probe: event-11 detour: {ex.Message}");
+        }
+
+        return pushEvent11Hook!.Original(inner, payload);
+    }
+
     private static byte* Inner(byte* data)
     {
         byte* module = *(byte**)(data + OffModule);
@@ -181,5 +235,9 @@ internal sealed unsafe class EmjAgentProbe : IDisposable
 
     private static string Fmt(int v) => v == int.MinValue ? "-" : v.ToString();
 
-    public void Dispose() => SetProbing(false);
+    public void Dispose()
+    {
+        SetProbing(false);
+        pushEvent11Hook?.Dispose();
+    }
 }
