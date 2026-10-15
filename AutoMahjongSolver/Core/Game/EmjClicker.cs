@@ -58,6 +58,58 @@ internal static unsafe class EmjClicker
         }
     }
 
+    /// <summary>
+    /// Log every visible node in the table addon that carries an event registered by the addon — the
+    /// clickable controls (result-screen buttons, call buttons). Used to find what to click instead of
+    /// firing the raw advance/call callbacks.
+    /// </summary>
+    public static void DumpButtons()
+    {
+        if (!EmjBoardReader.TryGetAddon(out AtkUnitBase* addon))
+        {
+            AmjsLog.Info("buttons: no table addon.");
+            return;
+        }
+
+        int state = addon->AtkValues != null ? addon->AtkValues[0].Int : -1;
+        AmjsLog.Info($"buttons: addon state {state}, {addon->UldManager.NodeListCount} top-level nodes.");
+        int found = 0;
+        WalkUld(addon, &addon->UldManager, "", ref found, depth: 0);
+        AmjsLog.Info($"buttons: {found} visible node(s) with addon events.");
+    }
+
+    private static void WalkUld(AtkUnitBase* addon, AtkUldManager* uld, string path, ref int found, int depth)
+    {
+        if (uld == null || depth > 6)
+            return;
+
+        for (int i = 0; i < uld->NodeListCount; i++)
+        {
+            AtkResNode* node = uld->NodeList[i];
+            if (node == null || !node->IsVisible())
+                continue;
+
+            string here = $"{path}/{node->NodeId}";
+            bool hasAddonEvent = false;
+            for (AtkEvent* evt = node->AtkEventManager.Event; evt != null; evt = evt->NextEvent)
+                if (evt->Listener == (AtkEventListener*)addon)
+                    hasAddonEvent = true;
+
+            if (hasAddonEvent && found < 80)
+            {
+                found++;
+                AmjsLog.Info($"buttons: {here} {Describe(addon, node)}");
+            }
+
+            if ((int)node->Type >= 1000)
+            {
+                AtkComponentBase* component = ((AtkComponentNode*)node)->Component;
+                if (component != null)
+                    WalkUld(addon, &component->UldManager, here, ref found, depth + 1);
+            }
+        }
+    }
+
     private static string Describe(AtkUnitBase* addon, AtkResNode* node)
     {
         if (node == null)
