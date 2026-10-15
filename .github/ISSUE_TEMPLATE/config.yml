@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions & discussion
-    url: https://github.com/kuchris/FFXIV-AutoMahjongSolver/discussions
+    url: https://github.com/kuchris/MahjongXIV/discussions
     about: Ask a question, share a setup, or kick around an idea before filing an issue.
   - name: Security disclosure
-    url: https://github.com/kuchris/FFXIV-AutoMahjongSolver/security/advisories/new
+    url: https://github.com/kuchris/MahjongXIV/security/advisories/new
     about: Report a security issue privately.

@@ -6,9 +6,9 @@ body:
       value: |
         For "is this normal?" / "am I doing this right?" / "the bot did something weird, is it a bug?" questions.
 
-        If you're confident it's a bug (crash, freeze, reproducible misclick), use [Issues](https://github.com/kuchris/FFXIV-AutoMahjongSolver/issues/new/choose) instead — the bug template captures the same info with clearer triage.
+        If you're confident it's a bug (crash, freeze, reproducible misclick), use [Issues](https://github.com/kuchris/MahjongXIV/issues/new/choose) instead — the bug template captures the same info with clearer triage.
 
-        If it's a security issue, please use [private vulnerability reporting](https://github.com/kuchris/FFXIV-AutoMahjongSolver/security/advisories/new) — not a public post.
+        If it's a security issue, please use [private vulnerability reporting](https://github.com/kuchris/MahjongXIV/security/advisories/new) — not a public post.
 
   - type: textarea
     id: what-happened
@@ -81,7 +81,7 @@ body:
       description: |
         If the bot froze with a popup open: switch to Off, run `/mj capture <some-label>`, click the right option manually, then attach the resulting `pluginConfigs/MahjongXIV/emj-captures.log` (or `emjl-captures.log` on NA).
 
-        See the [Reporting bugs discussion](https://github.com/kuchris/FFXIV-AutoMahjongSolver/discussions/41) for the full flow.
+        See the [Reporting bugs discussion](https://github.com/kuchris/MahjongXIV/discussions/41) for the full flow.
 
   - type: textarea
     id: extra

@@ -11,9 +11,9 @@ body:
 
         **Shortcut for dev-tools users:** if you have *Developer tools* enabled in Settings, open `/mj` → click the bug icon → **Bug report** tab. Every attachment this template asks for has a button right there (Snap, Autosnap, Capture, Variant dump), plus an *Open plugin config dir* button so you can drag the files straight into this issue.
 
-        If you're not sure whether it's a bug or expected behavior, prefer [Help & troubleshooting discussions](https://github.com/kuchris/FFXIV-AutoMahjongSolver/discussions/new?category=help-troubleshooting); triage is faster there.
+        If you're not sure whether it's a bug or expected behavior, prefer [Help & troubleshooting discussions](https://github.com/kuchris/MahjongXIV/discussions/new?category=help-troubleshooting); triage is faster there.
 
-        For security issues, please use [private vulnerability reporting](https://github.com/kuchris/FFXIV-AutoMahjongSolver/security/advisories/new) instead.
+        For security issues, please use [private vulnerability reporting](https://github.com/kuchris/MahjongXIV/security/advisories/new) instead.
 
   - type: textarea
     id: what-happened

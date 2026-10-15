@@ -6,7 +6,7 @@ body:
       value: |
         Thanks for helping verify a client variant. This is the single biggest unblocker for cross-region parity.
 
-        Context: see the [Client variants help wanted](https://github.com/kuchris/FFXIV-AutoMahjongSolver/discussions/42) discussion.
+        Context: see the [Client variants help wanted](https://github.com/kuchris/MahjongXIV/discussions/42) discussion.
 
         TL;DR of what to do before submitting:
         1. Seat at a Doman Mahjong table (lobby is fine — you don't need to be mid-hand).
