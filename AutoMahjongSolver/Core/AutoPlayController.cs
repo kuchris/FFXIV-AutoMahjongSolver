@@ -63,12 +63,6 @@ internal sealed class AutoPlayController : IDisposable
     /// <summary>What the bot has done since the cockpit was last engaged.</summary>
     public SessionStats Stats { get; } = new();
 
-    /// <summary>
-    /// Session-only override of the EmjL actuation gate, for capturing a bot-driven ranked crash with
-    /// the probe on (<c>/amjs ranked-test</c>). Never persisted: a plugin reload restores the gate.
-    /// </summary>
-    public static bool RankedTestOverride { get; set; }
-
     /// <summary>Why auto-play last disengaged itself at a non-casual table; cleared on the next engage.</summary>
     public string? BlockedReason { get; private set; }
 
@@ -160,14 +154,6 @@ internal sealed class AutoPlayController : IDisposable
                 return;
             }
 
-            if (EmjBoardReader.CurrentAddonName is { } addonName
-                && !AmjsConstants.ActuationAllowedAddons.Contains(addonName)
-                && !RankedTestOverride)
-            {
-                Block("Auto-play is disabled on ranked tables for now: it crashes the game there. Suggestions still work.", table);
-                return;
-            }
-
             addonAbsent = false;
             graceUntil = now + MatchStartGraceMs;
             AmjsLog.Info($"auto: table detected (state {state}, addon {EmjBoardReader.CurrentAddonName}, {table}, ContentFinderCondition {EmjTableGuard.CurrentCfc}); settling for {MatchStartGraceMs / 1000}s before acting.");
@@ -186,10 +172,15 @@ internal sealed class AutoPlayController : IDisposable
         // fresh popup, so it gets its own delay and retry budget instead of inheriting the last one's.
         bool newOffer = state == 15 && prevState == 15 && newDiscard;
 
-        // Diagnostics: while probing, record the clickable controls of each result screen once, to
-        // find the hand-change button to click instead of the raw [17]/[14] callbacks.
-        if (state != prevState && state is 29 or 32 && Plugin.Instance.AgentProbe.Probing)
-            EmjClicker.DumpButtons();
+        // Diagnostics: record a result screen's clickable controls (once per session, or every time
+        // while probing), to find the hand-change button to click instead of the raw callbacks.
+        if (state != prevState && state is 29 or 32)
+        {
+            if (Plugin.Instance.AgentProbe.Probing)
+                EmjClicker.DumpButtons();
+            else
+                EmjClicker.DumpButtonsOnce();
+        }
 
         if ((state != prevState && !sameTurn) || newOffer)
         {

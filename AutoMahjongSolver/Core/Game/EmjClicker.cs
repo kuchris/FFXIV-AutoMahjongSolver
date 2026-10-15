@@ -12,8 +12,22 @@ namespace AutoMahjongSolver.Core.Game;
 /// </summary>
 internal static unsafe class EmjClicker
 {
-    /// <summary>Session-only switch for the click path (<c>/amjs click-discard</c>); never persisted.</summary>
-    public static bool Enabled { get; set; }
+    /// <summary>
+    /// Discard by simulated click (default). <c>/amjs click-discard off</c> falls back to the raw callback
+    /// for the current session.
+    /// </summary>
+    public static bool Enabled { get; set; } = true;
+
+    private static bool resultButtonsLogged;
+
+    /// <summary>Dump the result screen's controls once per session, to find the hand-change button.</summary>
+    public static void DumpButtonsOnce()
+    {
+        if (resultButtonsLogged)
+            return;
+        resultButtonsLogged = true;
+        DumpButtons();
+    }
 
     /// <summary>Click hand slot 0-13 (13 = drawn tile). False when the slot or its click event can't be found.</summary>
     public static bool TryClickSlot(int slot)

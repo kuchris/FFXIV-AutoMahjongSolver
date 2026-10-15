@@ -61,7 +61,7 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.AddHandler(AmjsConstants.PrimaryCommand, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggle the window. /amjs config | about | auto | suggest. Debug: dump|tree|board|melds|capture|probe|ranked-test|events|buttons|click-discard.",
+            HelpMessage = "Toggle the window. /amjs config | about | auto | suggest. Debug: dump|tree|board|melds|capture|probe|diag|events|buttons|click-discard.",
         });
         CommandManager.AddHandler(AmjsConstants.AliasCommand, new CommandInfo(OnCommand)
         {
@@ -139,26 +139,14 @@ public sealed class Plugin : IDalamudPlugin
             case "click-discard":
                 EmjClicker.Enabled = (parts.Length > 1 ? parts[1] : "on") != "off";
                 AmjsLog.Info(EmjClicker.Enabled
-                    ? "Click-discard ON for this session: discards simulate a click on the tile."
-                    : "Click-discard OFF: discards fire the callback directly.");
+                    ? "Click-discard ON: discards simulate a click on the tile (default)."
+                    : "Click-discard OFF for this session: discards fire the callback directly.");
                 break;
-            case "ranked-test":
-                bool test = (parts.Length > 1 ? parts[1] : "on") != "off";
-                AutoPlayController.RankedTestOverride = test;
-                if (test)
-                {
-                    // Probe for agent states and event 11; capture for every callback the table UI fires
-                    // (op 14 moves the agent into the end-of-match path, and the bot did not send it).
-                    agentProbe.SetProbing(true);
-                    captureLogger.SetCapturing(true);
-                    ChatGui.PrintError($"{AmjsConstants.LogPrefix} Ranked test ON for this session: auto-play may act on ranked (EmjL) tables, "
-                                       + "which has crashed the game. Probe and capture are on. /amjs ranked-test off to stop.");
-                }
-                else
-                {
-                    captureLogger.SetCapturing(false);
-                    AmjsLog.Info("Ranked test OFF: ranked tables are read-only again.");
-                }
+            case "diag":
+                // Probe (agent states, event 11) plus capture (every callback the table UI fires).
+                bool diag = (parts.Length > 1 ? parts[1] : "on") != "off";
+                agentProbe.SetProbing(diag);
+                captureLogger.SetCapturing(diag);
                 break;
             case "probe":
                 string probe = parts.Length > 1 ? parts[1] : "toggle";
