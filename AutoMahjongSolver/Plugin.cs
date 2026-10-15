@@ -133,12 +133,16 @@ public sealed class Plugin : IDalamudPlugin
                 AutoPlayController.RankedTestOverride = test;
                 if (test)
                 {
+                    // Probe for agent states and event 11; capture for every callback the table UI fires
+                    // (op 14 moves the agent into the end-of-match path, and the bot did not send it).
                     agentProbe.SetProbing(true);
+                    captureLogger.SetCapturing(true);
                     ChatGui.PrintError($"{AmjsConstants.LogPrefix} Ranked test ON for this session: auto-play may act on ranked (EmjL) tables, "
-                                       + "which has crashed the game. The probe is on. /amjs ranked-test off to stop.");
+                                       + "which has crashed the game. Probe and capture are on. /amjs ranked-test off to stop.");
                 }
                 else
                 {
+                    captureLogger.SetCapturing(false);
                     AmjsLog.Info("Ranked test OFF: ranked tables are read-only again.");
                 }
                 break;
