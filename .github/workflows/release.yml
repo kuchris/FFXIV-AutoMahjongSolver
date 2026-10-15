@@ -17,10 +17,6 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    # Job-level so the hub-ping step's `if` can see it — `secrets` can't be used
-    # directly in an `if:` condition, but `env` mapped from a secret can.
-    env:
-      HUB_REPO_PAT: ${{ secrets.HUB_REPO_PAT }}
 
     steps:
       - name: Resolve target tag
@@ -143,17 +139,3 @@ jobs:
           }
           Write-Error 'Failed to push repo.json bump after 5 attempts.'
           exit 1
-
-      # Ping the multi-plugin hub repo so it regenerates repo.json immediately
-      # instead of waiting for its daily cron. The hub workflow re-reads each
-      # plugin's repo.json and refreshes DownloadCount from the GitHub API.
-      - name: Trigger hub repo regeneration
-        if: ${{ env.HUB_REPO_PAT != '' }}
-        shell: bash
-        run: |
-          curl -fsSL -X POST \
-            -H "Authorization: Bearer $HUB_REPO_PAT" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/kuchris/DalamudPlugins/dispatches \
-            -d '{"event_type":"plugin-released","client_payload":{"plugin":"${{ github.event.repository.name }}","version":"${{ steps.tag.outputs.version }}"}}'
