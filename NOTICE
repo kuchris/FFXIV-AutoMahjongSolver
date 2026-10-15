@@ -1,0 +1,24 @@
+MahjongXIV
+Copyright (c) 2026 kuchris
+
+MahjongXIV is a modified version of FFXIV-AutoMahjongSolver by Xeldar Alz
+(https://github.com/XeldarAlz/FFXIV-AutoMahjongSolver), distributed under the
+same license. Changes include the rename to MahjongXIV, a new compact
+interface, faster solver internals, discard lookahead, and fixes for ranked
+tables; the full history is in the git log.
+
+The original notice follows and is preserved as required by the AGPL.
+
+------------------------------------------------------------------------
+
+FFXIV-AutoMahjongSolver
+Copyright (c) 2026 Xeldar Alz
+
+This project is licensed under the GNU Affero General Public License v3.0.
+See the LICENSE.md file for the full license text.
+
+Redistributions and derivative works must preserve existing copyright
+notices and license information as required by the AGPL.
+
+If you create modified versions, please clearly indicate that your
+version is derived from this project and document the changes made.
