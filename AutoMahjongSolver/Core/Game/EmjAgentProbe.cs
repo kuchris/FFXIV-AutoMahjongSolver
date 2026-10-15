@@ -32,7 +32,9 @@ internal sealed unsafe class EmjAgentProbe : IDisposable
     private const int OffStandingsOwner = 0x468;
     private const int OffStandingsCount = 0x1418;
 
-    private string? filePath;
+    /// <summary>probe.log while probing, else null. <see cref="AmjsLog"/> mirrors every line into it.</summary>
+    private static string? mirrorPath;
+
     private bool probing;
     private int lastState = int.MinValue;
     private int lastNext = int.MinValue;
@@ -51,14 +53,15 @@ internal sealed unsafe class EmjAgentProbe : IDisposable
 
         if (on)
         {
-            filePath = Path.Combine(Plugin.PluginInterface.GetPluginConfigDirectory(), "probe.log");
+            mirrorPath = Path.Combine(Plugin.PluginInterface.GetPluginConfigDirectory(), "probe.log");
             Plugin.Framework.Update += OnUpdate;
-            Log($"Probe ON: logging AgentEmj state changes and module events (read-only) to /xllog and {filePath}.");
+            Log($"Probe ON: logging AgentEmj state changes and module events (read-only) to /xllog and {mirrorPath}.");
         }
         else
         {
             Plugin.Framework.Update -= OnUpdate;
             Log("Probe OFF.");
+            mirrorPath = null;
         }
     }
 
@@ -155,18 +158,21 @@ internal sealed unsafe class EmjAgentProbe : IDisposable
         Log($"probe: state 42 standings count {count}, indices {idx[0]} {idx[1]} {idx[2]} {idx[3]}.");
     }
 
+    private static void Log(string message) => AmjsLog.Info(message);
+
     /// <summary>
-    /// Log to /xllog and append synchronously to probe.log: the crash this hunts kills the process a
-    /// frame after state 42, before the plugin log's async sink may have flushed.
+    /// Append a plugin log line to probe.log, synchronously, while probing: the crash this hunts kills
+    /// the process a frame after state 42, before the plugin log's async sink may have flushed. Mirroring
+    /// every line (bot actions included) puts the bot's inputs and the agent's states on one timeline.
     /// </summary>
-    private void Log(string message)
+    public static void Mirror(string level, string message)
     {
-        AmjsLog.Info(message);
-        if (filePath is null)
+        string? path = mirrorPath;
+        if (path is null)
             return;
         try
         {
-            File.AppendAllText(filePath, $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}");
+            File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff} {level} {message}{Environment.NewLine}");
         }
         catch (IOException)
         {

@@ -58,7 +58,7 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.AddHandler(AmjsConstants.PrimaryCommand, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggle the window. /amjs config | about | auto | suggest. Debug: dump|tree|board|melds|capture|probe.",
+            HelpMessage = "Toggle the window. /amjs config | about | auto | suggest. Debug: dump|tree|board|melds|capture|probe|ranked-test.",
         });
         CommandManager.AddHandler(AmjsConstants.AliasCommand, new CommandInfo(OnCommand)
         {
@@ -126,6 +126,20 @@ public sealed class Plugin : IDalamudPlugin
                     captureLogger.SetCapturing(false);
                 else
                     captureLogger.Toggle();
+                break;
+            case "ranked-test":
+                bool test = (parts.Length > 1 ? parts[1] : "on") != "off";
+                AutoPlayController.RankedTestOverride = test;
+                if (test)
+                {
+                    agentProbe.SetProbing(true);
+                    ChatGui.PrintError($"{AmjsConstants.LogPrefix} Ranked test ON for this session: auto-play may act on ranked (EmjL) tables, "
+                                       + "which has crashed the game. The probe is on. /amjs ranked-test off to stop.");
+                }
+                else
+                {
+                    AmjsLog.Info("Ranked test OFF: ranked tables are read-only again.");
+                }
                 break;
             case "probe":
                 string probe = parts.Length > 1 ? parts[1] : "toggle";

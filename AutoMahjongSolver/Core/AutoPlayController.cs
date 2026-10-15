@@ -63,6 +63,12 @@ internal sealed class AutoPlayController : IDisposable
     /// <summary>What the bot has done since the cockpit was last engaged.</summary>
     public SessionStats Stats { get; } = new();
 
+    /// <summary>
+    /// Session-only override of the EmjL actuation gate, for capturing a bot-driven ranked crash with
+    /// the probe on (<c>/amjs ranked-test</c>). Never persisted: a plugin reload restores the gate.
+    /// </summary>
+    public static bool RankedTestOverride { get; set; }
+
     /// <summary>Why auto-play last disengaged itself at a non-casual table; cleared on the next engage.</summary>
     public string? BlockedReason { get; private set; }
 
@@ -155,7 +161,8 @@ internal sealed class AutoPlayController : IDisposable
             }
 
             if (EmjBoardReader.CurrentAddonName is { } addonName
-                && !AmjsConstants.ActuationAllowedAddons.Contains(addonName))
+                && !AmjsConstants.ActuationAllowedAddons.Contains(addonName)
+                && !RankedTestOverride)
             {
                 Block("Auto-play is disabled on ranked tables for now: it crashes the game there. Suggestions still work.", table);
                 return;
