@@ -1,8 +1,11 @@
-# Auto Mahjong Solver
+# MahjongXIV
 
 A Dalamud plugin that reads FFXIV Doman Mahjong, computes the mathematically best discard and call, shows a suggestion overlay, and (optionally, behind a gate) plays for you.
 
-Command: `/amjs` (alias `/mahjong`).
+Command: `/mj` (alias `/mahjongxiv`).
+
+MahjongXIV is a fork of [FFXIV-AutoMahjongSolver](https://github.com/XeldarAlz/FFXIV-AutoMahjongSolver)
+by Xeldar Alz, licensed under the AGPL-3.0 like the original; see [NOTICE](NOTICE) and [LICENSE.md](LICENSE.md).
 
 ## Status
 
@@ -16,30 +19,30 @@ await their first observed in-game trigger.
 | Yaku / Doman scoring | Implemented, unit-tested; han→points table pending live verification |
 | `Emj` hand reader (closed hand, aka) | **Verified live** (incl. under popups) |
 | `Emj` meld reader (chii/pon/kan, feeds meldCount) | **Verified live** — meld strips mapped (self=112 family); post-call discard state 28 handled |
-| `Emj` addon reader (rivers, dora, winds, scores, riichi badges) | Implemented; opponent river↔panel pairing pending live verification (`/amjs state`) |
+| `Emj` addon reader (rivers, dora, winds, scores, riichi badges) | Implemented; opponent river↔panel pairing pending live verification (`/mj state`) |
 | Seen-tile ukeire + furiten avoidance + fold vs riichi | Implemented; fold path awaits first observed opponent riichi |
 | Auto-riichi (declare on live closed tenpai, then tsumogiri) | **Verified live** |
 | Auto-play loop (discard, win, calls, redeal prompt, result screens) | **Verified live** — multi-hand sessions; popup fires retry-verified; settle grace + stall watchdog |
 | Nine-terminals redeal prompt (keep on kokushi shanten ≤ 2) | Implemented; option label match pending first observation |
 | Value-aware discard EV (exact points EV at tenpai, tenpai-EV lookahead at 1-shanten, two-step acceptance above) | Implemented, unit-tested, A/B-measured |
 | Shared turn policy (engine `TurnPolicy`, used by bot and simulator) | Implemented |
-| Self-play simulator (`tools/AutoMahjongSolver.Simulator`) | Implemented; baseline below |
+| Self-play simulator (`tools/MahjongXiv.Simulator`) | Implemented; baseline below |
 | Calling strategy v1 (pon: yakuhai / secured-yaku / dora-tanyao; chi+kan never) | Implemented, unit-tested, simulated; pending live verification |
 | Suggestion overlay | Planned |
 | Chi / kan calls | Planned (chi variant-selection UI unverified; kan flips unreadable dora) |
 
 ## Layout
 
-- `AutoMahjongSolver.Engine` — pure C# (`net10.0`), no Dalamud dependency. Tiles, shanten, ukeire, and (later) yaku/scoring. Fully unit-testable offline.
-- `tests/AutoMahjongSolver.Engine.Tests` — xUnit tests for the engine.
-- `AutoMahjongSolver` — the Dalamud plugin (planned): `Emj` reader, suggestion overlay, gated actuation. Built on ECommons.
+- `MahjongXiv.Engine` — pure C# (`net10.0`), no Dalamud dependency. Tiles, shanten, ukeire, and (later) yaku/scoring. Fully unit-testable offline.
+- `tests/MahjongXiv.Engine.Tests` — xUnit tests for the engine.
+- `MahjongXiv` — the Dalamud plugin (planned): `Emj` reader, suggestion overlay, gated actuation. Built on ECommons.
 
 ## Build
 
 ```
 dotnet test                                                   # engine + tests (no game required)
-dotnet run --project tools/AutoMahjongSolver.Simulator -c Release -- 2000 7      # self-play: matches, seed
-dotnet run --project tools/AutoMahjongSolver.Simulator -c Release -- ab 2000 7   # candidate vs baseline
+dotnet run --project tools/MahjongXiv.Simulator -c Release -- 2000 7      # self-play: matches, seed
+dotnet run --project tools/MahjongXiv.Simulator -c Release -- ab 2000 7   # candidate vs baseline
 ```
 
 The simulator runs matches in parallel; each match draws its walls from its own stream derived
@@ -50,7 +53,7 @@ Self-play baseline (2000 matches, seed 7, all four seats on the current policy, 
 the same run gave 11067 hands, 29.9% draws, 6199 points / 3.39 han.
 
 Self-play is symmetric, so it cannot show whether a change wins more points. Judge policy changes
-with `ab`: point `Policies.Candidate` (tools/AutoMahjongSolver.Simulator/Policies.cs) at the
+with `ab`: point `Policies.Candidate` (tools/MahjongXiv.Simulator/Policies.cs) at the
 variant (or pass `key=value` overrides of `EvalOptions`, e.g. `ab 2000 7 legacy=on shape=on`),
 and the candidate takes each seat in turn against three baselines on the same walls. It
 reports the candidate's score against the table average and its average placement, each with a
@@ -71,4 +74,4 @@ Doman Mahjong is standard 4-player Japanese riichi with FFXIV-specific scoring: 
 
 Auto-play of a ranked, human-PvP minigame carries account risk. Auto-play only acts at recognized
 Duty Finder tables (checked by ContentFinderCondition row). Ranked tables are refused unless
-"Auto-play on ranked tables" is enabled in `/amjs config`; unrecognized tables are always refused.
+"Auto-play on ranked tables" is enabled in `/mj config`; unrecognized tables are always refused.

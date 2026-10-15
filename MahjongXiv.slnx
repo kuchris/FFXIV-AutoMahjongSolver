@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/MahjongXiv.Engine.Tests/MahjongXiv.Engine.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/MahjongXiv.Simulator/MahjongXiv.Simulator.csproj" />
+  </Folder>
+  <Project Path="MahjongXiv.Engine/MahjongXiv.Engine.csproj" />
+  <Project Path="MahjongXiv/MahjongXiv.csproj">
+    <Platform Project="x64" />
+  </Project>
+</Solution>

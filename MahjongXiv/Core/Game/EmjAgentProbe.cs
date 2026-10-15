@@ -1,0 +1,243 @@
+using System.IO;
+using Dalamud.Hooking;
+using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+
+namespace MahjongXiv.Core.Game;
+
+/// <summary>
+/// Read-only diagnostic for the ranked-table crash: logs AgentEmj's internal state machine and the
+/// game module's event queue to /xllog. It sends no inputs and calls no game functions; it only reads
+/// memory, at offsets taken from a disassembly of ffxiv_dx11.exe (2026-10-13), so they will drift
+/// with patches. Every pointer is null- and sanity-checked before it is followed.
+/// <list type="bullet">
+/// <item>agent+0x28 → data; data+0xF8C = state, data+0xF90 = queued next state; data+0xF80 → module.</item>
+/// <item>module+0x8 → inner; event ring at inner+0x10 (slot pointers), +0x18 capacity, +0x20 head,
+/// +0x28 count; an event's first dword is its type. State 8 enters state 42 on event 11.</item>
+/// <item>State 42 reads standings indices from inner+0x440 (count at [inner+0x468]+0x1418) and the
+/// crash read garbage indices there.</item>
+/// <item>The module's listener pushes event 11 through one virtual (found by signature below), with a
+/// 0x2C-byte payload. The probe hooks it to log the payload and then calls the original unchanged.</item>
+/// </list>
+/// </summary>
+internal sealed unsafe class EmjAgentProbe : IDisposable
+{
+    private const int OffData = 0x28;
+    private const int OffState = 0xF8C;
+    private const int OffNextState = 0xF90;
+    private const int OffModule = 0xF80;
+    private const int OffInner = 0x8;
+    private const int OffRing = 0x10;
+    private const int OffCapacity = 0x18;
+    private const int OffHead = 0x20;
+    private const int OffCount = 0x28;
+    private const int OffStandings = 0x430 + 0x10;
+    private const int OffStandingsOwner = 0x468;
+    private const int OffStandingsCount = 0x1418;
+
+    /// <summary>Prologue of the listener virtual that queues event 11 (unique in ffxiv_dx11.exe, 2026-10-13).</summary>
+    private const string PushEvent11Signature = "48 89 5C 24 08 57 48 83 EC 40 48 8B FA C7 44 24 20 0B 00 00 00";
+    private const int Event11PayloadInts = 0x2C / 4;
+
+    private delegate nint PushEvent11Delegate(nint inner, int* payload);
+
+    private Hook<PushEvent11Delegate>? pushEvent11Hook;
+
+    /// <summary>probe.log while probing, else null. <see cref="MjLog"/> mirrors every line into it.</summary>
+    private static string? mirrorPath;
+
+    private bool probing;
+    private int lastState = int.MinValue;
+    private int lastNext = int.MinValue;
+    private long lastQueueCount = -1;
+    private int lastFrontType = int.MinValue;
+
+    public bool Probing => probing;
+
+    public void SetProbing(bool on)
+    {
+        if (on == probing)
+            return;
+        probing = on;
+        lastState = lastNext = lastFrontType = int.MinValue;
+        lastQueueCount = -1;
+
+        if (on)
+        {
+            mirrorPath = Path.Combine(Plugin.PluginInterface.GetPluginConfigDirectory(), "probe.log");
+            Plugin.Framework.Update += OnUpdate;
+            Log($"Probe ON: logging AgentEmj state changes and module events (read-only) to /xllog and {mirrorPath}.");
+            EnableEvent11Hook();
+        }
+        else
+        {
+            pushEvent11Hook?.Disable();
+            Plugin.Framework.Update -= OnUpdate;
+            Log("Probe OFF.");
+            mirrorPath = null;
+        }
+    }
+
+    public void Toggle() => SetProbing(!probing);
+
+    private void OnUpdate(IFramework framework)
+    {
+        try
+        {
+            Poll();
+        }
+        catch (Exception ex)
+        {
+            MjLog.Error($"probe: {ex.Message}");
+            SetProbing(false);
+        }
+    }
+
+    private void Poll()
+    {
+        AgentModule* agents = AgentModule.Instance();
+        if (agents == null)
+            return;
+
+        byte* agent = (byte*)agents->GetAgentByInternalId(AgentId.Emj);
+        byte* data = agent == null ? null : *(byte**)(agent + OffData);
+        if (data == null)
+        {
+            if (lastState != int.MinValue)
+                Log("probe: agent data gone (left the table).");
+            lastState = lastNext = int.MinValue;
+            return;
+        }
+
+        int state = *(int*)(data + OffState);
+        int next = *(int*)(data + OffNextState);
+        int addonState = EmjBoardReader.ReadStateCode();
+
+        if (state != lastState || next != lastNext)
+        {
+            Log($"probe: agent state {Fmt(lastState)} -> {state} (next {next}), addon state {addonState}.");
+            if (state == 42)
+                LogStandings(data);
+            lastState = state;
+            lastNext = next;
+        }
+
+        byte* inner = Inner(data);
+        if (inner == null)
+            return;
+
+        long count = *(long*)(inner + OffCount);
+        int front = count > 0 ? FrontType(inner) : int.MinValue;
+        if (count != lastQueueCount || front != lastFrontType)
+        {
+            if (count > 0)
+                Log($"probe: event queue count {count}, front type {Fmt(front)} (agent state {state}, addon state {addonState}).");
+            lastQueueCount = count;
+            lastFrontType = front;
+        }
+    }
+
+    private void EnableEvent11Hook()
+    {
+        if (pushEvent11Hook is null)
+        {
+            if (!Plugin.SigScanner.TryScanText(PushEvent11Signature, out nint address))
+            {
+                Log("probe: event-11 push not found by signature (game updated?); payload logging off.");
+                return;
+            }
+
+            pushEvent11Hook = Plugin.GameInteropProvider.HookFromAddress<PushEvent11Delegate>(address, PushEvent11Detour);
+            Log($"probe: event-11 hook created @ 0x{address:X}.");
+        }
+
+        pushEvent11Hook.Enable();
+    }
+
+    private nint PushEvent11Detour(nint inner, int* payload)
+    {
+        try
+        {
+            if (payload != null)
+            {
+                var ints = new string[Event11PayloadInts];
+                for (int i = 0; i < ints.Length; i++)
+                    ints[i] = payload[i].ToString();
+                Log($"probe: EVENT 11 pushed, payload [{string.Join(", ", ints)}], agent state {lastState}, addon state {EmjBoardReader.ReadStateCode()}.");
+            }
+            else
+            {
+                Log("probe: EVENT 11 pushed with a null payload.");
+            }
+        }
+        catch (Exception ex)
+        {
+            MjLog.Error($"probe: event-11 detour: {ex.Message}");
+        }
+
+        return pushEvent11Hook!.Original(inner, payload);
+    }
+
+    private static byte* Inner(byte* data)
+    {
+        byte* module = *(byte**)(data + OffModule);
+        return module == null ? null : *(byte**)(module + OffInner);
+    }
+
+    /// <summary>The front event's type, or int.MinValue when the ring looks inconsistent.</summary>
+    private static int FrontType(byte* inner)
+    {
+        byte** ring = *(byte***)(inner + OffRing);
+        long capacity = *(long*)(inner + OffCapacity);
+        long head = *(long*)(inner + OffHead);
+        if (ring == null || capacity <= 0 || capacity > 4096 || (capacity & (capacity - 1)) != 0)
+            return int.MinValue;
+
+        byte* evt = ring[head & (capacity - 1)];
+        return evt == null ? int.MinValue : *(int*)evt;
+    }
+
+    private void LogStandings(byte* data)
+    {
+        byte* inner = Inner(data);
+        if (inner == null)
+        {
+            Log("probe: state 42 with no module.");
+            return;
+        }
+
+        byte* owner = *(byte**)(inner + OffStandingsOwner);
+        string count = owner == null ? "null owner" : (*(int*)(owner + OffStandingsCount)).ToString();
+        int* idx = (int*)(inner + OffStandings);
+        Log($"probe: state 42 standings count {count}, indices {idx[0]} {idx[1]} {idx[2]} {idx[3]}.");
+    }
+
+    private static void Log(string message) => MjLog.Info(message);
+
+    /// <summary>
+    /// Append a plugin log line to probe.log, synchronously, while probing: the crash this hunts kills
+    /// the process a frame after state 42, before the plugin log's async sink may have flushed. Mirroring
+    /// every line (bot actions included) puts the bot's inputs and the agent's states on one timeline.
+    /// </summary>
+    public static void Mirror(string level, string message)
+    {
+        string? path = mirrorPath;
+        if (path is null)
+            return;
+        try
+        {
+            File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff} {level} {message}{Environment.NewLine}");
+        }
+        catch (IOException)
+        {
+        }
+    }
+
+    private static string Fmt(int v) => v == int.MinValue ? "-" : v.ToString();
+
+    public void Dispose()
+    {
+        SetProbing(false);
+        pushEvent11Hook?.Dispose();
+    }
+}
